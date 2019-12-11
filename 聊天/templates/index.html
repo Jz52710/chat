@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.6/socket.io.min.js"></script>
+    <!-- 最新版本的 Bootstrap 核心 CSS 文件 -->
+    <link rel="stylesheet" href="static/index.css">
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous"> -->
+
+</head>
+
+<body>
+    <div class="left">
+        <div class="top">
+            <h2>与<span id="chatObj">***</span>对话中...</h2>
+        </div>
+        <div class="bottom" sytle="text-align">
+                <textarea class="form-control" rows="8" id="con"></textarea>
+                <button type="submit" onclick="send()" class="btn btn-primary" >Submit</button>
+        </div>
+    </div>
+    <div class="right">
+        <div class="right_top">
+            <form class="form-horizontal" id='login_box1'>
+                <div class="form-group">
+                    <label for="inputEmail3" class="col-sm-2 control-label">name</label>
+                    <div class="col-sm-10">
+                    <input type="text" autocomplete="off" id="username" class="form-control" id="inputEmail3" placeholder="请输入用户名">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="col-sm-offset-2 col-sm-10">
+                    <button type="button" onclick="login()"  class="btn btn-default" id="loginbtn">登录</button>
+                    </div>
+                </div>
+            </form>
+            <div id="login_box2" style="display:none;text-align: center;font-size:24px;color:#fff;">
+                <span></span>
+                <a href="javascript:loginout();" style="color:blue;font-size:12px">退出</a>
+            </div>
+        </div>
+        <div class="right_bottom">
+            <table class="table table-striped" id="friends">
+                  
+            </table>
+        </div>
+    </div>
+</body>
+<script>
+    let url = "http://127.0.0.1:5000/"
+    let socket = io.connect(url)
+    let username = document.querySelector("#username")
+    let login_box1 = document.querySelector("#login_box1")
+    let login_box2 = document.querySelector("#login_box2")
+    let friends = document.querySelector("#friends")
+    let USER = ""
+   
+
+    socket.on('islogin',function(data){
+        let res = data['res']
+        let message = data['message']
+        if(res=="ok"){
+            USER = username.value
+            login_box1.style.display="none" 
+            login_box2.style.display = "block"
+            login_box2.querySelector('span').innerHTML = username.value
+            window.onbeforeunload = function(){
+                console.log(username.value)
+                socket.emit("loginout",{"username":username.value})
+            }
+        }else{       
+            alert(message)
+        }
+    })
+  
+    function login(){
+        let value = username.value
+        if(value){
+            socket.emit("login",{'username':value})
+        }
+    }
+    function loginout(){
+        let value = username.value
+        socket.emit('loginout',{'username':value})
+    }
+    socket.on("isloginout",function(data){
+        let res = data['res']
+        if(res=="ok"){
+            login_box2.style.display="none"
+            login_box1.style.display="block"
+        }
+    })
+
+
+    socket.on("listfriends",function(data){
+        let list = data['friends']
+        let str1 = ""
+        for(i of list){
+            str1+=`<tr>
+                     <td>${i}</td>
+                 </tr> `
+        }
+        friends.innerHTML = str1
+    })
+    
+    let TO = ""
+    // 聊天对象
+    let chatObj = document.querySelector("#chatObj") 
+    friends.onclick = function(e){
+        let target = e.target
+        if(target.nodeName=="TD"){
+            let con = target.innerHTML
+            if(con!=USER){
+                chatObj.innerHTML = con
+                TO = con
+            }
+        }
+    }
+
+let chatConObj = document.querySelector("#con")
+
+
+function send(){
+    let chatCon = chatConObj.value
+    console.log(TO,chatCon)
+    //发送聊天内容
+    if(TO==""){
+        alert("请选择聊天对象")
+        return
+    }
+    if(chatCon!=""){
+        console.log('发送')
+        socket.emit('send',{'to':TO,'user':USER,'con':chatCon})
+    }
+}
+
+
+    
+
+socket.on("myaccept",function(data){
+    console.log(data)
+})
+
+</script>
+</html>
